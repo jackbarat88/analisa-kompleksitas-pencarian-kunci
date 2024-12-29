@@ -1,0 +1,221 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+)
+
+// Struktur untuk merepresentasikan ruangan dengan lokasi spesifik
+type Ruangan struct {
+	nama       string
+	lokasi     []string
+	dikunjungi bool
+	adaKunci   bool
+}
+
+// Struktur untuk menyimpan hasil pencarian
+type HasilPencarian struct {
+	lokasiDitemukan string
+	waktuPencarian  time.Duration
+	jumlahLangkah   int
+}
+
+// Fungsi untuk menampilkan daftar ruangan dan lokasinya
+func tampilkanDaftarRuangan() []Ruangan {
+	rumah := []Ruangan{
+		{
+			nama:       "Ruang Tamu",
+			lokasi:     []string{"sofa", "meja tamu", "rak sepatu", "laci buffet"},
+			dikunjungi: false,
+			adaKunci:   false,
+		},
+		{
+			nama:       "Kamar Tidur",
+			lokasi:     []string{"meja belajar", "laci lemari", "kolong tempat tidur", "meja rias"},
+			dikunjungi: false,
+			adaKunci:   false,
+		},
+		{
+			nama:       "Dapur",
+			lokasi:     []string{"meja makan", "counter dapur", "rak piring", "laci peralatan"},
+			dikunjungi: false,
+			adaKunci:   false,
+		},
+		{
+			nama:       "Ruang Kerja",
+			lokasi:     []string{"meja kerja", "rak buku", "laci dokumen", "area printer"},
+			dikunjungi: false,
+			adaKunci:   false,
+		},
+	}
+
+	fmt.Println("\nDaftar Ruangan dan Lokasi yang Tersedia:")
+	for i, ruang := range rumah {
+		fmt.Printf("\n%d. %s:\n", i+1, ruang.nama)
+		for j, lok := range ruang.lokasi {
+			fmt.Printf("   %d) %s\n", j+1, lok)
+		}
+	}
+	return rumah
+}
+
+// Fungsi untuk mendapatkan input dari pengguna
+func bacaInput(prompt string) string {
+	fmt.Print(prompt)
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSpace(input)
+}
+
+// Fungsi untuk memvalidasi input ruangan
+func validasiRuangan(pilihan string, rumah []Ruangan) (string, bool) {
+	for _, ruang := range rumah {
+		if strings.EqualFold(pilihan, ruang.nama) {
+			return ruang.nama, true
+		}
+	}
+	return "", false
+}
+
+// Fungsi untuk memvalidasi input lokasi
+func validasiLokasi(ruangan string, lokasi string, rumah []Ruangan) bool {
+	for _, ruang := range rumah {
+		if ruang.nama == ruangan {
+			for _, lok := range ruang.lokasi {
+				if strings.EqualFold(lokasi, lok) {
+					return true
+				}
+			}
+			break
+		}
+	}
+	return false
+}
+
+// Fungsi untuk membuat rumah dengan lokasi kunci yang ditentukan
+func buatRumahDenganKunci(rumahTemplate []Ruangan, ruanganKunci string) []Ruangan {
+	rumah := make([]Ruangan, len(rumahTemplate))
+	copy(rumah, rumahTemplate)
+
+	for i := range rumah {
+		if rumah[i].nama == ruanganKunci {
+			rumah[i].adaKunci = true
+			break
+		}
+	}
+	return rumah
+}
+
+// Metode pencarian iteratif
+func cariKunciIteratif(rumah []Ruangan) HasilPencarian {
+	mulai := time.Now()
+	langkah := 0
+
+	for i := range rumah {
+		rumah[i].dikunjungi = true
+		langkah++
+		for _, lok := range rumah[i].lokasi {
+			langkah++
+			// Beban kerja tambahan
+			_ = strings.Repeat("x", 1000000)
+			if rumah[i].adaKunci {
+				return HasilPencarian{
+					lokasiDitemukan: fmt.Sprintf("%s (%s)", rumah[i].nama, lok),
+					waktuPencarian:  time.Since(mulai),
+					jumlahLangkah:   langkah,
+				}
+			}
+		}
+	}
+
+	return HasilPencarian{
+		lokasiDitemukan: "Kunci tidak ditemukan",
+		waktuPencarian:  time.Since(mulai),
+		jumlahLangkah:   langkah,
+	}
+}
+
+// Metode pencarian rekursif
+func cariKunciRekursif(rumah []Ruangan, indeksRuangan int, langkah *int) HasilPencarian {
+	if indeksRuangan >= len(rumah) {
+		return HasilPencarian{
+			lokasiDitemukan: "Kunci tidak ditemukan",
+			jumlahLangkah:   *langkah,
+		}
+	}
+
+	rumah[indeksRuangan].dikunjungi = true
+	*langkah++
+
+	for _, lok := range rumah[indeksRuangan].lokasi {
+		*langkah++
+		// Beban kerja tambahan
+		_ = strings.Repeat("x", 1000000)
+		if rumah[indeksRuangan].adaKunci {
+			return HasilPencarian{
+				lokasiDitemukan: fmt.Sprintf("%s (%s)",
+					rumah[indeksRuangan].nama, lok),
+				jumlahLangkah: *langkah,
+			}
+		}
+	}
+
+	return cariKunciRekursif(rumah, indeksRuangan+1, langkah)
+}
+
+func main() {
+	fmt.Println("=== Simulasi Pencarian Kunci yang Hilang ===")
+
+	// Tampilkan daftar ruangan dan lokasi
+	rumahTemplate := tampilkanDaftarRuangan()
+
+	// Input dan validasi ruangan
+	var ruanganKunci string
+	var valid bool
+	for {
+		input := bacaInput("\nMasukkan nama ruangan tempat kunci berada: ")
+		ruanganKunci, valid = validasiRuangan(input, rumahTemplate)
+		if valid {
+			break
+		}
+		fmt.Println("Ruangan tidak valid! Silakan pilih dari daftar yang tersedia.")
+	}
+
+	// Input dan validasi lokasi
+	var lokasiKunci string
+	for {
+		lokasiKunci = bacaInput("Masukkan lokasi spesifik dalam ruangan tersebut: ")
+		if validasiLokasi(ruanganKunci, lokasiKunci, rumahTemplate) {
+			break
+		}
+		fmt.Println("Lokasi tidak valid! Silakan pilih dari daftar yang tersedia.")
+	}
+
+	fmt.Printf("\nKunci diletakkan di: %s (%s)\n", ruanganKunci, lokasiKunci)
+
+	// Uji metode iteratif
+	fmt.Println("\nMetode Iteratif:")
+	rumah := buatRumahDenganKunci(rumahTemplate, ruanganKunci)
+	hasilIteratif := cariKunciIteratif(rumah)
+
+	fmt.Printf("\nHasil Pencarian Iteratif:\n")
+	fmt.Printf("- Kunci ditemukan di: %s\n", hasilIteratif.lokasiDitemukan)
+	fmt.Printf("- Waktu pencarian: %v\n", hasilIteratif.waktuPencarian)
+	fmt.Printf("- Jumlah langkah: %d\n", hasilIteratif.jumlahLangkah)
+
+	// Uji metode rekursif
+	fmt.Println("\nMetode Rekursif:")
+	rumah = buatRumahDenganKunci(rumahTemplate, ruanganKunci)
+	langkah := 0
+	mulai := time.Now()
+	hasilRekursif := cariKunciRekursif(rumah, 0, &langkah)
+	hasilRekursif.waktuPencarian = time.Since(mulai)
+
+	fmt.Printf("\nHasil Pencarian Rekursif:\n")
+	fmt.Printf("- Kunci ditemukan di: %s\n", hasilRekursif.lokasiDitemukan)
+	fmt.Printf("- Waktu pencarian: %v\n", hasilRekursif.waktuPencarian)
+	fmt.Printf("- Jumlah langkah: %d\n", hasilRekursif.jumlahLangkah)
+}
